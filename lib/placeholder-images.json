@@ -1,0 +1,64 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero-main",
+      "description": "A vibrant spread of delicious food on a table.",
+      "imageUrl": "https://images.unsplash.com/photo-1542986151-13ecf8e0453e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Zm9vZCUyMHNwcmVhZHxlbnwwfHx8fDE3NTg1ODk3MTB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "food spread"
+    },
+    {
+      "id": "user-avatar-1",
+      "description": "Avatar for a user.",
+      "imageUrl": "https://images.unsplash.com/photo-1535643302794-19c3804b874b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTg1ODUxMDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "user-avatar-2",
+      "description": "Avatar for another user.",
+      "imageUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTg1ODUxMDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "dish-pasta-carbonara",
+      "description": "A plate of delicious Pasta Carbonara.",
+      "imageUrl": "https://images.unsplash.com/photo-1579631542720-3a87824fff86?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwYXN0YSUyMGNhcmJvbmFyYXxlbnwwfHx8fDE3NTg2MTEyNzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pasta carbonara"
+    },
+    {
+      "id": "dish-kfc-chicken",
+      "description": "Crispy fried chicken, KFC-style.",
+      "imageUrl": "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmcmllZCUyMGNoaWNrZW58ZW58MHx8fHwxNzU4NjgyMzUyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "fried chicken"
+    },
+    {
+      "id": "dish-pizza-margherita",
+      "description": "A classic Pizza Margherita with fresh basil.",
+      "imageUrl": "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxwaXp6YSUyMG1hcmdoZXJpdGF8ZW58MHx8fHwxNzU4NjgyNDA5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pizza margherita"
+    },
+    {
+      "id": "dish-sushi-platter",
+      "description": "A beautiful sushi platter with various types of sushi.",
+      "imageUrl": "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzdXNoaSUyMHBsYXR0ZXJ8ZW58MHx8fHwxNzU4NjgyNDQzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sushi platter"
+    },
+    {
+      "id": "dish-tacos",
+      "description": "Delicious tacos with various toppings.",
+      "imageUrl": "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHx0YWNvc3xlbnwwfHx8fDE3NTg2ODI0NzF8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "tacos"
+    },
+    {
+      "id": "dish-burger",
+      "description": "A juicy burger with fries.",
+      "imageUrl": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxidXJnZXJ8ZW58MHx8fHwxNzU4NjgyNTAyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "burger"
+    },
+    {
+      "id": "dish-ramen",
+      "description": "A steaming bowl of ramen with toppings.",
+      "imageUrl": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxyYW1lbnxlbnwwfHx8fDE3NTg2ODI1MzR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "ramen"
+    }
+  ]
+}
