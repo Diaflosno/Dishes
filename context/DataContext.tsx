@@ -1,28 +1,8 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect, useMemo } from 'react';
 import type { User as AppUser, Dish, Recipe } from '../lib/types';
+import { authService } from '../firebase/authService';
 
-// Mock data para desarrollo
-const mockUsers: AppUser[] = [
-  {
-    id: '1',
-    name: 'Chef María',
-    email: 'maria@ejemplo.com',
-    avatarImageId: 'user-avatar-1',
-    bio: 'Amante de la cocina italiana',
-    favoriteCuisines: ['Italiana', 'Mediterránea'],
-    likedRecipeIds: ['1', '2']
-  },
-  {
-    id: '2',
-    name: 'Carlos Gourmet',
-    email: 'carlos@ejemplo.com',
-    avatarImageId: 'user-avatar-2',
-    bio: 'Especialista en comida rápida gourmet',
-    favoriteCuisines: ['Americana', 'Asiática'],
-    likedRecipeIds: ['3']
-  }
-];
-
+// Mock data para desarrollo (mientras no hay datos reales en Firestore)
 const mockDishes: Dish[] = [
   {
     id: '1',
@@ -179,37 +159,78 @@ const mockRecipes: Recipe[] = [
   }
 ];
 
+// Función para convertir AuthUser de Firebase a AppUser
+const convertAuthUserToAppUser = (firebaseUser: any): AppUser => ({
+  id: firebaseUser.uid,
+  name: firebaseUser.displayName || 'Usuario de Prueba',
+  email: firebaseUser.email || 'usuario@ejemplo.com',
+  avatarImageId: 'user-avatar-1',
+  bio: 'Usuario registrado con Google (modo demo)',
+  favoriteCuisines: [],
+  likedRecipeIds: [],
+});
+
 type DataContextType = {
-  users: AppUser[];
   dishes: Dish[];
   recipes: Recipe[];
   currentUser: AppUser | null;
+  isAuthenticated: boolean;
   addRecipe: (recipe: Omit<Recipe, 'id' | 'likes' | 'userId' | 'imageId'>, dishId: string) => Promise<void>;
   addDish: (dish: Omit<Dish, 'id' | 'userId' | 'imageId'>) => Promise<string>;
   updateRecipe: (recipe: Recipe) => void;
   deleteRecipe: (recipeId: string) => void;
   deleteDish: (dishId: string) => void;
   toggleLike: (recipeId: string) => void;
-  logout: () => void;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
   isDataLoaded: boolean;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [users, setUsers] = useState<AppUser[]>(mockUsers);
   const [dishes, setDishes] = useState<Dish[]>(mockDishes);
   const [recipes, setRecipes] = useState<Recipe[]>(mockRecipes);
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(mockUsers[0]); // Usuario por defecto
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Simular carga de datos
+  // Escuchar cambios en el estado de autenticación
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const unsubscribe = authService.onAuthStateChanged((firebaseUser) => {
+      if (firebaseUser) {
+        const appUser = convertAuthUserToAppUser(firebaseUser);
+        setCurrentUser(appUser);
+        setIsAuthenticated(true);
+      } else {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
       setIsDataLoaded(true);
-    }, 1000);
-    return () => clearTimeout(timer);
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const signInWithGoogle = async () => {
+    try {
+      await authService.signInWithGoogle();
+      // El usuario se actualizará automáticamente por el listener onAuthStateChanged
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await authService.signOut();
+      // El usuario se actualizará automáticamente por el listener onAuthStateChanged
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      throw error;
+    }
+  };
 
   const addRecipe = async (recipeData: Omit<Recipe, 'id' | 'likes' | 'userId' | 'imageId'>, dishId: string) => {
     if (!currentUser) throw new Error("User must be logged in to add a recipe.");
@@ -275,23 +296,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
       })
     );
 
-    setUsers(prev => 
-      prev.map(user => {
-        if (user.id === currentUser.id) {
-          const likedRecipeIds = user.likedRecipeIds || [];
-          const isLiked = likedRecipeIds.includes(recipeId);
-          
-          return {
-            ...user,
-            likedRecipeIds: isLiked 
-              ? likedRecipeIds.filter(id => id !== recipeId)
-              : [...likedRecipeIds, recipeId]
-          };
-        }
-        return user;
-      })
-    );
-
     // Actualizar currentUser también
     const likedRecipeIds = currentUser.likedRecipeIds || [];
     const isLiked = likedRecipeIds.includes(recipeId);
@@ -304,24 +308,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-  };
-
   const contextValue = useMemo(() => ({
-    users,
     dishes,
     recipes,
     currentUser,
+    isAuthenticated,
     addRecipe,
     addDish,
     updateRecipe,
     deleteRecipe,
     deleteDish,
     toggleLike,
-    logout,
+    signInWithGoogle,
+    signOut,
     isDataLoaded,
-  }), [users, dishes, recipes, currentUser, isDataLoaded]);
+  }), [dishes, recipes, currentUser, isAuthenticated, isDataLoaded]);
 
   return (
     <DataContext.Provider value={contextValue}>
