@@ -1,24 +1,24 @@
-import React, { useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  TouchableOpacity, 
-  StyleSheet, 
-  Dimensions,
-  SafeAreaView,
-  FlatList
-} from 'react-native';
 import { Image } from 'expo-image';
 import { Search, UtensilsCrossed } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { useSearch } from '@/context/SearchContext';
 import { useData } from '@/context/DataContext';
+import { useSearch } from '@/context/SearchContext';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { placeholderImages } from '@/lib/placeholder-images.json';
 import { Dish } from '@/lib/types';
 

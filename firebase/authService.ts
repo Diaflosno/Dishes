@@ -1,39 +1,34 @@
-import { signInAnonymously, signOut as firebaseSignOut, User } from 'firebase/auth';
+
+import {
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  User
+} from 'firebase/auth';
 import { auth } from './config';
 
-export interface AuthUser {
-  uid: string;
-  email: string | null;
-  displayName: string | null;
-  photoURL: string | null;
-}
-
 class AuthService {
-  // Simulación de inicio de sesión con Google (usando anonymous auth por ahora)
-  async signInWithGoogle(): Promise<AuthUser | null> {
+  async signInWithEmail(email: string, password: string): Promise<User | null> {
     try {
-      console.log('Iniciando sesión anónima (simulando Google Sign-In)...');
-      
-      // Por ahora usamos autenticación anónima para simular Google
-      const result = await signInAnonymously(auth);
-      
-      // Simular datos de usuario de Google
-      const mockGoogleUser: AuthUser = {
-        uid: result.user.uid,
-        email: 'usuario@ejemplo.com',
-        displayName: 'Usuario de Prueba',
-        photoURL: null,
-      };
-      
-      console.log('Sesión iniciada exitosamente (modo simulación)');
-      return mockGoogleUser;
-    } catch (error: any) {
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error) {
       console.error('Error al iniciar sesión:', error);
       throw error;
     }
   }
 
-  // Cerrar sesión
+  async registerWithEmail(email: string, password: string): Promise<User | null> {
+    try {
+      const result = await createUserWithEmailAndPassword(auth, email, password);
+      return result.user;
+    } catch (error) {
+      console.error('Error al registrar usuario:', error);
+      throw error;
+    }
+  }
+
   async signOut(): Promise<void> {
     try {
       await firebaseSignOut(auth);
@@ -44,19 +39,16 @@ class AuthService {
     }
   }
 
-  // Obtener usuario actual
   getCurrentUser(): User | null {
     return auth.currentUser;
   }
 
-  // Verificar si el usuario está autenticado
   isSignedIn(): boolean {
     return auth.currentUser !== null;
   }
 
-  // Escuchar cambios en el estado de autenticación
   onAuthStateChanged(callback: (user: User | null) => void) {
-    return auth.onAuthStateChanged(callback);
+    return onAuthStateChanged(auth, callback);
   }
 }
 

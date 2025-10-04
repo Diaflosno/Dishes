@@ -1,41 +1,52 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  SafeAreaView, 
-  ActivityIndicator,
-  Alert 
-} from 'react-native';
-import { Image } from 'expo-image';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { useData } from '@/context/DataContext';
+import { authService } from '@/firebase/authService';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { placeholderImages } from '@/lib/placeholder-images.json';
+import { Image } from 'expo-image';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { signInWithGoogle } = useData();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
 
   const heroImage = placeholderImages.find(img => img.id === 'hero-main');
 
-  const handleGoogleSignIn = async () => {
+
+  const handleLogin = async () => {
     setIsLoading(true);
     try {
-      await signInWithGoogle();
+      await authService.signInWithEmail(email, password);
       // La navegación se manejará automáticamente por el estado de autenticación
     } catch (error: any) {
-      console.error('Error en Google Sign-In:', error);
-      Alert.alert(
-        'Error de inicio de sesión',
-        'No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error de inicio de sesión', error.message || 'No se pudo iniciar sesión.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    setIsRegistering(true);
+    try {
+      await authService.registerWithEmail(email, password);
+      Alert.alert('Registro exitoso', 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.');
+    } catch (error: any) {
+      Alert.alert('Error de registro', error.message || 'No se pudo registrar el usuario.');
+    } finally {
+      setIsRegistering(false);
     }
   };
 
@@ -62,43 +73,65 @@ export default function LoginScreen() {
 
       {/* Login Section */}
       <View style={styles.loginSection}>
-        <Text style={[styles.welcomeTitle, { color: colors.text }]}>
-          ¡Bienvenido!
-        </Text>
-        <Text style={[styles.welcomeSubtitle, { color: colors.icon }]}>
-          Inicia sesión para explorar miles de recetas deliciosas
-        </Text>
+        <Text style={[styles.welcomeTitle, { color: colors.text }]}>¡Bienvenido!</Text>
+        <Text style={[styles.welcomeSubtitle, { color: colors.icon }]}>Inicia sesión para explorar miles de recetas deliciosas</Text>
 
-        {/* Google Sign-In Button */}
+        {/* Email Input */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Correo electrónico</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, { color: colors.text, borderColor: colors.icon + '40' }]}
+              placeholder="Correo electrónico"
+              placeholderTextColor={colors.icon}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
+            />
+          </View>
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Contraseña</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[styles.input, { color: colors.text, borderColor: colors.icon + '40' }]}
+              placeholder="Contraseña"
+              placeholderTextColor={colors.icon}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+          </View>
+        </View>
+
+        {/* Login Button */}
         <TouchableOpacity
-          style={[
-            styles.googleButton,
-            { 
-              backgroundColor: colors.background,
-              borderColor: colors.icon + '40',
-            }
-          ]}
-          onPress={handleGoogleSignIn}
-          disabled={isLoading}
+          style={[styles.loginButton, { backgroundColor: colors.tint }]}
+          onPress={handleLogin}
+          disabled={isLoading || !email || !password}
         >
           {isLoading ? (
-            <ActivityIndicator size="small" color={colors.tint} />
+            <ActivityIndicator size="small" color={colors.background} />
           ) : (
-            <>
-              {/* Google Icon */}
-              <View style={styles.googleIcon}>
-                <Text style={styles.googleIconText}>G</Text>
-              </View>
-              <Text style={[styles.googleButtonText, { color: colors.text }]}>
-                Continuar con Google
-              </Text>
-            </>
+            <Text style={[styles.loginButtonText, { color: colors.background }]}>Iniciar sesión</Text>
           )}
         </TouchableOpacity>
 
-        <Text style={[styles.disclaimer, { color: colors.icon }]}>
-          Al continuar, aceptas nuestros términos de servicio y política de privacidad
-        </Text>
+        {/* Register Button */}
+        <TouchableOpacity
+          style={[styles.registerButton, { borderColor: colors.tint }]}
+          onPress={handleRegister}
+          disabled={isRegistering || !email || !password}
+        >
+          {isRegistering ? (
+            <ActivityIndicator size="small" color={colors.tint} />
+          ) : (
+            <Text style={[styles.registerButtonText, { color: colors.tint }]}>Registrarse</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={[styles.disclaimer, { color: colors.icon }]}>Al continuar, aceptas nuestros términos de servicio y política de privacidad</Text>
       </View>
     </SafeAreaView>
   );
@@ -109,34 +142,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroSection: {
-    height: '40%',
+    height: 180,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    marginBottom: 12,
   },
   heroImage: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
-    opacity: 0.3,
+    width: '80%',
+    height: 140,
+    opacity: 0.25,
+    borderRadius: 16,
+    alignSelf: 'center',
   },
   heroOverlay: {
     alignItems: 'center',
     zIndex: 1,
+    width: '100%',
   },
   appTitle: {
-    fontSize: 48,
+    fontSize: 36,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   appSubtitle: {
-    fontSize: 18,
+    fontSize: 16,
     textAlign: 'center',
   },
   loginSection: {
     flex: 1,
-    padding: 32,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
     justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   welcomeTitle: {
     fontSize: 32,
@@ -147,40 +189,62 @@ const styles = StyleSheet.create({
   welcomeSubtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 48,
+    marginBottom: 32,
     lineHeight: 22,
   },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+  inputGroup: {
+    marginBottom: 16,
+    width: '100%',
+    maxWidth: 340,
+  },
+  inputLabel: {
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 24,
-    elevation: 2,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    overflow: 'hidden',
+    width: '100%',
   },
-  googleIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#4285F4',
+  input: {
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 2,
+    width: '100%',
+    minWidth: 180,
+    maxWidth: 340,
+    color: '#000', // Pure black text
+  },
+  loginButton: {
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    marginBottom: 12,
+    width: '100%',
+    maxWidth: 340,
   },
-  googleIconText: {
-    color: 'white',
+  loginButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
   },
-  googleButtonText: {
+  registerButton: {
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    marginBottom: 18,
+    width: '100%',
+    maxWidth: 340,
+  },
+  registerButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   disclaimer: {
     fontSize: 12,
