@@ -1,5 +1,7 @@
+import { addDoc, collection } from 'firebase/firestore';
 import React, { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { authService } from '../firebase/authService';
+import { firestore } from '../firebase/config';
 import type { User as AppUser, Dish, Recipe } from '../lib/types';
 
 
@@ -50,7 +52,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // All CRUD methods should be implemented to use Firestore/Realtime DB
   const addRecipe = async () => { throw new Error('Implementar con Firestore'); };
-  const addDish = async () => { throw new Error('Implementar con Firestore'); };
+  const addDish = async (dish: Omit<Dish, 'id' | 'userId' | 'imageId'> & { imageId?: string }) => {
+    try {
+      const userId = currentUser?.id || '';
+      const imageId = dish.imageId || '';
+      const docRef = await addDoc(collection(firestore, 'dishes'), {
+        ...dish,
+        userId,
+        imageId,
+      });
+      setDishes(prev => [...prev, { ...dish, userId, imageId, id: docRef.id }]);
+      return docRef.id;
+    } catch (error) {
+      throw error;
+    }
+  };
   const updateRecipe = () => { throw new Error('Implementar con Firestore'); };
   const deleteRecipe = () => { throw new Error('Implementar con Firestore'); };
   const deleteDish = () => { throw new Error('Implementar con Firestore'); };
