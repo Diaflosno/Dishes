@@ -4,14 +4,16 @@ import React, { useMemo } from 'react';
 import {
   Dimensions,
   FlatList,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+// ¡LA CORRECCIÓN ESTÁ AQUÍ!
+import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Link } from 'expo-router';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,28 +35,36 @@ function DishCard({ dish }: { dish: Dish }) {
   const image = placeholderImages.find(img => img.id === dish.imageId);
 
   return (
-    <TouchableOpacity style={styles.dishCardContainer}>
-      <Card style={styles.dishCard}>
-        <CardHeader style={styles.cardHeader}>
-          <Image
-            source={{ uri: image?.imageUrl || `https://picsum.photos/seed/${dish.id}/400/250` }}
-            style={styles.dishImage}
-            contentFit="cover"
-          />
-        </CardHeader>
-        <CardContent style={styles.cardContent}>
-          <Text style={[styles.dishName, { color: colors.text }]} numberOfLines={2}>
-            {dish.name}
-          </Text>
-          <View style={styles.recipeInfo}>
-            <UtensilsCrossed size={16} color={colors.icon} />
-            <Text style={[styles.recipeCount, { color: colors.icon }]}>
-              {recipeCount} {recipeCount === 1 ? 'receta' : 'recetas'}
+    <Link 
+      href={{
+        pathname: "/dish/[id]",
+        params: { id: dish.id }
+      }} 
+      asChild
+    >
+      <TouchableOpacity style={styles.dishCardContainer}>
+        <Card style={styles.dishCard}>
+          <CardHeader style={styles.cardHeader}>
+            <Image
+              source={{ uri: image?.imageUrl || `https://picsum.photos/seed/${dish.id}/400/250` }}
+              style={styles.dishImage}
+              contentFit="cover"
+            />
+          </CardHeader>
+          <CardContent style={styles.cardContent}>
+            <Text style={[styles.dishName, { color: colors.text }]} numberOfLines={2}>
+              {dish.name}
             </Text>
-          </View>
-        </CardContent>
-      </Card>
-    </TouchableOpacity>
+            <View style={styles.recipeInfo}>
+              <UtensilsCrossed size={16} color={colors.icon} />
+              <Text style={[styles.recipeCount, { color: colors.icon }]}>
+                {recipeCount} {recipeCount === 1 ? 'receta' : 'recetas'}
+              </Text>
+            </View>
+          </CardContent>
+        </Card>
+      </TouchableOpacity>
+    </Link>
   );
 }
 
@@ -187,8 +197,9 @@ export default function HomeScreen() {
   );
 }
 
+// ... (El resto del código de los estilos no cambia)
 const styles = StyleSheet.create({
-  container: {
+    container: {
     flex: 1,
   },
   scrollView: {

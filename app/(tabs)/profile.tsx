@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  SafeAreaView,
+import React, { useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
   ActivityIndicator,
-  Alert 
+  Alert
 } from 'react-native';
-import { Image } from 'expo-image';
+import { SafeAreaView } from 'react-native-safe-area-context';
+// Se eliminó la importación de 'Image' que no se usaba
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { useData } from '@/context/DataContext';
@@ -19,10 +19,10 @@ export default function ProfileScreen() {
   const { currentUser, signOut, recipes, dishes } = useData();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Calcular estadísticas del usuario
-  const userRecipes = recipes.filter(recipe => recipe.userId === currentUser?.id);
-  const userDishes = dishes.filter(dish => dish.userId === currentUser?.id);
-  const totalLikes = userRecipes.reduce((sum, recipe) => sum + recipe.likes, 0);
+  // Optimizamos los cálculos con useMemo
+  const userRecipes = useMemo(() => recipes.filter(recipe => recipe.userId === currentUser?.id), [recipes, currentUser?.id]);
+  const userDishes = useMemo(() => dishes.filter(dish => dish.userId === currentUser?.id), [dishes, currentUser?.id]);
+  const totalLikes = useMemo(() => userRecipes.reduce((sum, recipe) => sum + recipe.likes, 0), [userRecipes]);
 
   const handleSignOut = async () => {
     Alert.alert(
