@@ -1,11 +1,15 @@
-import React from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
-import { useData } from "@/context/DataContext";
-import { Dish } from "@/lib/types";
 import RecipeCard from "@/components/ui/recipe-card";
+import { Colors } from '@/constants/theme';
+import { useData } from "@/context/DataContext";
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Dish } from "@/lib/types";
+import React from "react";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 export default function HomeScreen() {
   const { dishes, recipes } = useData();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
   // 📦 Obtener los IDs de platillos que tienen recetas asociadas
   const dishIdsFromRecipes = recipes.map((recipe) => recipe.dishId);
@@ -34,8 +38,8 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>📖 Recetario</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+  <Text style={styles.header}>Recetario</Text>
 
       {/* ✅ Usamos los platillos filtrados */}
       <FlatList
@@ -52,20 +56,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
+    paddingTop: 52, // margen superior igual que otras páginas
     backgroundColor: "#fff",
   },
   header: {
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 16,
-    textAlign: "center",
+  fontSize: 38,
+  fontWeight: "bold",
+  marginBottom: 28,
+  textAlign: 'center',
+  color: '#fff',
+  letterSpacing: 2,
+  backgroundColor: '#000',
+  borderRadius: 12,
+  paddingHorizontal: 18,
+  paddingVertical: 6,
+  textShadowColor: '#000',
+  textShadowOffset: { width: 1, height: 1 },
+  textShadowRadius: 2,
   },
   dishContainer: {
     marginBottom: 24,
   },
   dishTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    marginBottom: 8,
+  fontSize: 24,
+  fontWeight: "bold",
+  marginBottom: 8,
+  color: '#fff',
+  textShadowColor: '#000',
+  textShadowOffset: { width: 1, height: 1 },
+  textShadowRadius: 2,
   },
 });

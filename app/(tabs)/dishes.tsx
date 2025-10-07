@@ -90,7 +90,7 @@ export default function DishesScreen() {
           contentFit="cover"
         />
         <View style={styles.dishInfo}>
-          <Text style={[styles.dishName, { color: '#000' }]} numberOfLines={1}>
+          <Text style={[styles.dishName, { color: '#fff', fontSize: 22, fontWeight: 'bold', textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 }]} numberOfLines={1}>
             {item.name}
           </Text>
           <Text
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   dishCard: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+  backgroundColor: '#000',
     marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
