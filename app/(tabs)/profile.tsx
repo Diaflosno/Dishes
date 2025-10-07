@@ -1,14 +1,17 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useData } from '@/context/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import RecipeCard from '@/components/ui/recipe-card';
+import  RecipeCard  from '@/components/ui/recipe-card';
+import { getAuth, signOut } from 'firebase/auth';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const { currentUser, dishes, recipes } = useData();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
+  const router = useRouter();
 
   if (!currentUser) {
     return (
@@ -23,16 +26,29 @@ export default function ProfileScreen() {
   const userRecipes = recipes.filter(r => r.userId === currentUser.id);
 
   // ❤️ Recetas que el usuario ha dado "me gusta"
-const likedRecipes = useMemo(() => {
-  return recipes.filter(r => (currentUser?.likedRecipeIds || []).includes(r.id));
-}, [recipes, currentUser?.likedRecipeIds]);
+  const likedRecipes = useMemo(() => {
+    return recipes.filter(r => (currentUser.likedRecipeIds || []).includes(r.id));
+  }, [recipes, currentUser.likedRecipeIds]);
 
-// 📊 Estadísticas
-const totalLikesReceived = useMemo(() => {
-  return userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0);
-}, [userRecipes]);
-
+  // 📊 Estadísticas
+  const totalLikesReceived = useMemo(
+    () => userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0),
+    [userRecipes]
+  );
   const totalLikesGiven = currentUser.likedRecipeIds?.length || 0;
+
+  // 🔐 Cerrar sesión
+  const handleSignOut = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      Alert.alert("Sesión cerrada", "Has cerrado sesión correctamente.");
+      router.replace("/login");
+    } catch (error) {
+      Alert.alert("Error", "No se pudo cerrar la sesión.");
+      console.error("❌ Error al cerrar sesión:", error);
+    }
+  };
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -64,6 +80,11 @@ const totalLikesReceived = useMemo(() => {
           <Text style={[styles.statLabel, { color: colors.icon }]}>Me gusta recibidos</Text>
         </View>
       </View>
+
+      {/* 🔐 Botón de cerrar sesión */}
+      <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.tint }]} onPress={handleSignOut}>
+        <Text style={styles.logoutText}>🔓 Cerrar sesión</Text>
+      </TouchableOpacity>
 
       {/* ❤️ Recetas que ha dado like */}
       <View style={styles.section}>
@@ -121,6 +142,18 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
+  },
+  logoutButton: {
+    marginTop: 20,
+    marginHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  logoutText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   section: {
     padding: 16,

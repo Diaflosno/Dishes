@@ -2,8 +2,8 @@ import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Heart } from "lucide-react-native";
 import { useData } from "@/context/DataContext";
+import { useRouter } from "expo-router";
 import type { Recipe } from "@/lib/types";
-import { useRouter } from "expo-router"; // 👈 Añade esto arriba
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -11,17 +11,24 @@ interface RecipeCardProps {
 
 export default function RecipeCard({ recipe }: RecipeCardProps) {
   const { toggleLike, currentUser } = useData();
+  const router = useRouter();
+
   const isLiked = currentUser?.likedRecipeIds?.includes(recipe.id);
-  const router = useRouter(); // 👈 Inicializa el router
+
+  const handlePress = () => {
+    router.push(`/recipe/${recipe.id}`); // ✅ Navega al detalle correctamente
+  };
 
   return (
-    <TouchableOpacity 
-      style={styles.card} 
-      onPress={() => router.push(`/recipe/${recipe.id}`)} // 👈 Navega al detalle
-    >
-      <Image source={{ uri: recipe.imageUrl }} style={styles.image} />
+    <TouchableOpacity style={styles.card} onPress={handlePress}>
+      {/* ✅ Mostrar imagen solo si existe */}
+      {recipe.imageUrl ? (
+        <Image source={{ uri: recipe.imageUrl }} style={styles.image} />
+      ) : null}
+
       <View style={styles.info}>
         <Text style={styles.title}>{recipe.title}</Text>
+
         <View style={styles.likesRow}>
           <TouchableOpacity onPress={() => toggleLike(recipe.id)}>
             <Heart color={isLiked ? "red" : "gray"} fill={isLiked ? "red" : "none"} />

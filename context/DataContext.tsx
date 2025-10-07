@@ -1,48 +1,55 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  onSnapshot,
-  updateDoc,
-  increment,
-  arrayUnion,
-  arrayRemove,
-  writeBatch,
-  Unsubscribe,
-  getDoc,
-  setDoc,
-} from "firebase/firestore";
+// context/DataContext.tsx
 import React, {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState,
-  useCallback,
   useRef,
+  useState,
 } from "react";
-import { authService } from "../firebase/authService";
-import { firestore } from "../firebase/config";
-import type { User as AppUser, Dish, Recipe } from "../lib/types";
+import {
+  addDoc,
+  arrayRemove,
+  arrayUnion,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  onSnapshot,
+  setDoc,
+  Unsubscribe,
+  updateDoc,
+  writeBatch,
+  increment,
+} from "firebase/firestore";
+import { firestore } from "@/firebase/config";
+import { authService } from "@/firebase/authService";
+import type { User as AppUser, Dish, Recipe } from "@/lib/types";
 
 type DataContextType = {
   dishes: Dish[];
   recipes: Recipe[];
   currentUser: AppUser | null;
   isAuthenticated: boolean;
+  isDataLoaded: boolean;
+
+  // dishes
+  addDish: (dish: Omit<Dish, "id" | "userId" | "imageId">, imageId?: string) => Promise<string>;
+  updateDish: (dishId: string, data: Partial<Pick<Dish, "name" | "imageId">>) => Promise<void>;
+  deleteDish: (dishId: string) => Promise<void>;
+
+  // recipes
   addRecipe: (recipe: Omit<Recipe, "id" | "likes" | "userId">) => Promise<void>;
-  addDish: (
-    dish: Omit<Dish, "id" | "userId" | "imageId">,
-    imageId?: string
-  ) => Promise<string>;
   updateRecipe: (recipe: Recipe) => Promise<void>;
   deleteRecipe: (recipeId: string) => Promise<void>;
-  deleteDish: (dishId: string) => Promise<void>;
+
+  // social
   toggleLike: (recipeId: string) => Promise<void>;
+
+  // auth
   signOut: () => Promise<void>;
-  isDataLoaded: boolean;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -51,130 +58,92 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const unsubscribeListeners = useRef<Unsubscribe[]>([]);
+  const unsubscribeRefs = useRef<Unsubscribe[]>([]);
 
   useEffect(() => {
-    const authUnsubscribe = authService.onAuthStateChanged(
-      async (firebaseUser: any) => {
-        unsubscribeListeners.current.forEach((unsubscribe) => unsubscribe());
-        unsubscribeListeners.current = [];
+    const unsub = authService.onAuthStateChanged(async (fbUser) => {
+      // Limpia listeners anteriores
+      unsubscribeRefs.current.forEach((fn) => fn());
+      unsubscribeRefs.current = [];
 
-        if (firebaseUser) {
-          const userDocRef = doc(firestore, "users", firebaseUser.uid);
-
-          const snap = await getDoc(userDocRef);
-          if (!snap.exists()) {
-            await setDoc(userDocRef, {
-              name: firebaseUser.displayName || "Usuario Anónimo",
-              email: firebaseUser.email || "",
-              avatarImageId: "",
-              bio: "",
-              favoriteCuisines: [],
-              likedRecipeIds: [],
-            });
-          }
-
-          const userUnsubscribe = onSnapshot(userDocRef, (docSnap) => {
-            if (docSnap.exists()) {
-              setCurrentUser({ id: docSnap.id, ...docSnap.data() } as AppUser);
-            }
-          });
-
-          const dishesUnsubscribe = onSnapshot(
-            collection(firestore, "dishes"),
-            (snapshot) => {
-              const dishesData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              })) as Dish[];
-              setDishes(dishesData);
-            }
-          );
-
-          const recipesUnsubscribe = onSnapshot(
-            collection(firestore, "recipes"),
-            (snapshot) => {
-              const recipesData = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-              })) as Recipe[];
-              setRecipes(recipesData);
-            }
-          );
-
-          unsubscribeListeners.current = [
-            userUnsubscribe,
-            dishesUnsubscribe,
-            recipesUnsubscribe,
-          ];
-
-          setIsAuthenticated(true);
-          setIsDataLoaded(true);
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-          setDishes([]);
-          setRecipes([]);
-          setIsDataLoaded(true);
-        }
+      if (!fbUser) {
+        setCurrentUser(null);
+        setDishes([]);
+        setRecipes([]);
+        setIsAuthenticated(false);
+        setIsDataLoaded(true);
+        return;
       }
-    );
 
-    return () => authUnsubscribe();
+      // Asegurar doc de usuario
+      const userRef = doc(firestore, "users", fbUser.uid);
+      const snap = await getDoc(userRef);
+      if (!snap.exists()) {
+        await setDoc(userRef, {
+          name: fbUser.displayName || "Usuario Anónimo",
+          email: fbUser.email || "",
+          avatarImageId: "",
+          bio: "",
+          favoriteCuisines: [],
+          likedRecipeIds: [],
+        });
+      }
+
+      const unsubUser = onSnapshot(userRef, (ds) => {
+        if (ds.exists()) {
+          setCurrentUser({ id: ds.id, ...(ds.data() as Omit<AppUser, "id">) });
+        }
+      });
+
+      const unsubDishes = onSnapshot(collection(firestore, "dishes"), (qs) => {
+        const arr = qs.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Dish, "id">) }));
+        setDishes(arr);
+      });
+
+      const unsubRecipes = onSnapshot(collection(firestore, "recipes"), (qs) => {
+        const arr = qs.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Recipe, "id">) }));
+        setRecipes(arr);
+      });
+
+      unsubscribeRefs.current = [unsubUser, unsubDishes, unsubRecipes];
+      setIsAuthenticated(true);
+      setIsDataLoaded(true);
+    });
+
+    return () => unsub();
   }, []);
 
+  // ---------- Dishes ----------
   const addDish = useCallback(
-    async (
-      dish: Omit<Dish, "id" | "userId" | "imageId">,
-      imageId: string = ""
-    ) => {
+    async (dish: Omit<Dish, "id" | "userId" | "imageId">, imageId: string = "") => {
       if (!currentUser) throw new Error("Usuario no autenticado.");
-      const newDish = { ...dish, userId: currentUser.id, imageId };
-      const docRef = await addDoc(collection(firestore, "dishes"), newDish);
+      const docRef = await addDoc(collection(firestore, "dishes"), {
+        ...dish,
+        userId: currentUser.id,
+        imageId,
+      });
       return docRef.id;
     },
     [currentUser]
   );
 
-  const addRecipe = useCallback(
-    async (recipe: Omit<Recipe, "id" | "likes" | "userId">) => {
+  const updateDish = useCallback(
+    async (dishId: string, data: Partial<Pick<Dish, "name" | "imageId">>) => {
       if (!currentUser) throw new Error("Usuario no autenticado.");
-      const newRecipe = { ...recipe, userId: currentUser.id, likes: 0 };
-      await addDoc(collection(firestore, "recipes"), newRecipe);
-    },
-    [currentUser]
-  );
 
-  const updateRecipe = useCallback(async (updatedRecipe: Recipe) => {
-  if (!currentUser) throw new Error("Usuario no autenticado.");
+      const dishRef = doc(firestore, "dishes", dishId);
+      const snap = await getDoc(dishRef);
+      if (!snap.exists()) throw new Error("El platillo no existe.");
 
-  const recipeRef = doc(firestore, "recipes", updatedRecipe.id);
+      const dishData = snap.data() as Dish;
+      if (dishData.userId !== currentUser.id) {
+        throw new Error("No tienes permiso para editar este platillo.");
+      }
 
-  // Verificar que el usuario sea el creador
-  const recipeSnap = await getDoc(recipeRef);
-  if (!recipeSnap.exists()) throw new Error("La receta no existe.");
-  const recipeData = recipeSnap.data();
-  if (recipeData.userId !== currentUser.id) {
-    throw new Error("No tienes permiso para editar esta receta.");
-  }
-
-  await updateDoc(recipeRef, {
-    title: updatedRecipe.title,
-    ingredients: updatedRecipe.ingredients,
-    steps: updatedRecipe.steps,
-    cookingTime: updatedRecipe.cookingTime,
-    imageUrl: updatedRecipe.imageUrl,
-  });
-}, [currentUser]);
-
-  const deleteRecipe = useCallback(
-    async (recipeId: string) => {
-      if (!currentUser) throw new Error("Usuario no autenticado.");
-      const recipeRef = doc(firestore, "recipes", recipeId);
-      await deleteDoc(recipeRef);
+      await updateDoc(dishRef, { ...data });
     },
     [currentUser]
   );
@@ -182,57 +151,106 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const deleteDish = useCallback(
     async (dishId: string) => {
       if (!currentUser) throw new Error("Usuario no autenticado.");
-      const batch = writeBatch(firestore);
+
       const dishRef = doc(firestore, "dishes", dishId);
+      const snap = await getDoc(dishRef);
+      if (!snap.exists()) throw new Error("El platillo no existe.");
+      const dishData = snap.data() as Dish;
+      if (dishData.userId !== currentUser.id) {
+        throw new Error("No tienes permiso para borrar este platillo.");
+      }
+
+      // Borra platillo y sus recetas
+      const batch = writeBatch(firestore);
       batch.delete(dishRef);
-      const dishRecipes = recipes.filter((r) => r.dishId === dishId);
-      dishRecipes.forEach((recipe) => {
-        const recipeRef = doc(firestore, "recipes", recipe.id);
-        batch.delete(recipeRef);
-      });
+      recipes
+        .filter((r) => r.dishId === dishId)
+        .forEach((r) => batch.delete(doc(firestore, "recipes", r.id)));
       await batch.commit();
     },
     [currentUser, recipes]
   );
 
-  // ✅ toggleLike corregido
+  // ---------- Recipes ----------
+  const addRecipe = useCallback(
+    async (recipe: Omit<Recipe, "id" | "likes" | "userId">) => {
+      if (!currentUser) throw new Error("Usuario no autenticado.");
+      await addDoc(collection(firestore, "recipes"), {
+        ...recipe,
+        userId: currentUser.id,
+        likes: 0,
+      });
+    },
+    [currentUser]
+  );
+
+  const updateRecipe = useCallback(
+    async (updatedRecipe: Recipe) => {
+      if (!currentUser) throw new Error("Usuario no autenticado.");
+      const ref = doc(firestore, "recipes", updatedRecipe.id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new Error("La receta no existe.");
+      const data = snap.data() as Recipe;
+      if (data.userId !== currentUser.id) {
+        throw new Error("No tienes permiso para editar esta receta.");
+      }
+      await updateDoc(ref, {
+        title: updatedRecipe.title,
+        ingredients: updatedRecipe.ingredients,
+        steps: updatedRecipe.steps,
+        cookingTime: updatedRecipe.cookingTime,
+        imageUrl: updatedRecipe.imageUrl,
+      });
+    },
+    [currentUser]
+  );
+
+  const deleteRecipe = useCallback(
+    async (recipeId: string) => {
+      if (!currentUser) throw new Error("Usuario no autenticado.");
+      const ref = doc(firestore, "recipes", recipeId);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return;
+
+      const recipe = snap.data() as Recipe;
+      // Permitir al dueño de la receta o al dueño del platillo
+      const dishRef = doc(firestore, "dishes", recipe.dishId);
+      const dishSnap = await getDoc(dishRef);
+      const dish = dishSnap.exists() ? (dishSnap.data() as Dish) : null;
+
+      const canDelete =
+        recipe.userId === currentUser.id || (dish && dish.userId === currentUser.id);
+      if (!canDelete) throw new Error("No tienes permiso para borrar esta receta.");
+
+      await deleteDoc(ref);
+    },
+    [currentUser]
+  );
+
+  // ---------- Social ----------
   const toggleLike = useCallback(
     async (recipeId: string) => {
       if (!currentUser) throw new Error("Usuario no autenticado.");
       const userRef = doc(firestore, "users", currentUser.id);
       const recipeRef = doc(firestore, "recipes", recipeId);
 
-      const userSnap = await getDoc(userRef);
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          name: currentUser.name || "Usuario Anónimo",
-          email: currentUser.email || "",
-          avatarImageId: currentUser.avatarImageId || "",
-          bio: currentUser.bio || "",
-          favoriteCuisines: currentUser.favoriteCuisines || [],
-          likedRecipeIds: [],
-        });
-      }
+      const isLiked = (currentUser.likedRecipeIds || []).includes(recipeId);
 
-      const isLiked = currentUser.likedRecipeIds?.includes(recipeId);
       const batch = writeBatch(firestore);
       batch.update(
         userRef,
-        isLiked
-          ? { likedRecipeIds: arrayRemove(recipeId) }
-          : { likedRecipeIds: arrayUnion(recipeId) }
+        isLiked ? { likedRecipeIds: arrayRemove(recipeId) } : { likedRecipeIds: arrayUnion(recipeId) }
       );
       batch.update(recipeRef, { likes: increment(isLiked ? -1 : 1) });
       await batch.commit();
 
-      setCurrentUser((prev: AppUser | null) =>
+      // Actualización optimista local
+      setCurrentUser((prev) =>
         prev
           ? {
               ...prev,
               likedRecipeIds: isLiked
-                ? (prev.likedRecipeIds || []).filter(
-                    (id: string) => id !== recipeId
-                  )
+                ? (prev.likedRecipeIds || []).filter((id) => id !== recipeId)
                 : [...(prev.likedRecipeIds || []), recipeId],
             }
           : prev
@@ -241,30 +259,31 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [currentUser]
   );
 
+  // ---------- Auth ----------
   const signOut = useCallback(async () => {
-    try {
-      unsubscribeListeners.current.forEach((unsubscribe) => unsubscribe());
-      unsubscribeListeners.current = [];
-      await authService.signOut();
-    } catch (error) {
-      console.error("Error during sign out:", error);
-    }
+    unsubscribeRefs.current.forEach((fn) => fn());
+    unsubscribeRefs.current = [];
+    await authService.signOut();
   }, []);
 
-  const contextValue = useMemo(
+  const value = useMemo<DataContextType>(
     () => ({
       dishes,
       recipes,
       currentUser,
       isAuthenticated,
-      addRecipe,
+      isDataLoaded,
+
       addDish,
+      updateDish,
+      deleteDish,
+
+      addRecipe,
       updateRecipe,
       deleteRecipe,
-      deleteDish,
+
       toggleLike,
       signOut,
-      isDataLoaded,
     }),
     [
       dishes,
@@ -273,26 +292,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
       isAuthenticated,
       isDataLoaded,
       addDish,
-      addRecipe,
+      updateDish,
       deleteDish,
+      addRecipe,
+      updateRecipe,
       deleteRecipe,
       toggleLike,
-      updateRecipe,
       signOut,
     ]
   );
 
-  return (
-    <DataContext.Provider value={contextValue}>
-      {children}
-    </DataContext.Provider>
-  );
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 export function useData() {
-  const context = useContext(DataContext);
-  if (context === undefined) {
-    throw new Error("useData debe ser usado dentro de un DataProvider");
-  }
-  return context;
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData debe usarse dentro de DataProvider");
+  return ctx;
 }
