@@ -7,7 +7,8 @@ import { PlusCircle } from 'lucide-react-native';
 import { useData } from '@/context/DataContext';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { RecipeCard } from '@/components/ui/recipe-card';
+import RecipeCard from '@/components/ui/recipe-card';
+
 
 export default function DishDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,7 +34,7 @@ export default function DishDetailScreen() {
       
       <FlatList
         data={dishRecipes}
-        renderItem={({ item }) => <RecipeCard recipe={item} />}
+        renderItem={({ item }) => item ? <RecipeCard recipe={item} /> : null}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={
           <View style={styles.headerContainer}>

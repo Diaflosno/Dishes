@@ -4,20 +4,46 @@ import { Colors } from '@/constants/theme';
 import { useData } from '@/context/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  FlatList,
+  Image as RNImage,
+} from 'react-native';
+import { pickImageFromGallery, uploadImageAsync } from '@/firebase/uploadImage';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 
 export default function DishesScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addDish } = useData();
+  const { addDish, dishes } = useData();
+  const router = useRouter();
+
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 📸 NUEVO: Estado para imagen
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
   const handleCrearPlatillo = () => {
     setModalVisible(true);
+  };
+
+  const handlePickImage = async () => {
+    const uri = await pickImageFromGallery();
+    if (uri) setImageUri(uri);
+  };
+
+  const handleRemoveImage = () => {
+    setImageUri(null);
   };
 
   const handleSubmit = async () => {
@@ -28,26 +54,89 @@ export default function DishesScreen() {
     }
     setLoading(true);
     try {
-      await addDish({ name, description });
+      let imageUrl = '';
+      if (imageUri) {
+        imageUrl = await uploadImageAsync(imageUri, `dishes/${Date.now()}.jpg`);
+      }
+
+      await addDish({ name, description }, imageUrl);
       setModalVisible(false);
       setName('');
       setDescription('');
+      setImageUri(null);
     } catch (e) {
+      console.error(e);
       setError('Error al crear el platillo.');
     } finally {
       setLoading(false);
     }
   };
 
+  // 🧩 Renderizar cada platillo
+  const renderDish = ({ item }: any) => {
+    const imageUrl =
+      item.imageId && item.imageId.startsWith('http')
+        ? item.imageId
+        : `https://picsum.photos/seed/${item.id}/400/250`;
+
+    return (
+      <TouchableOpacity
+        style={styles.dishCard}
+        onPress={() => router.push(`/dish/${item.id}`)}
+      >
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.dishImage}
+          contentFit="cover"
+        />
+        <View style={styles.dishInfo}>
+          <Text style={[styles.dishName, { color: colors.text }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.dishDescription, { color: colors.icon }]}
+            numberOfLines={2}
+          >
+            {item.description || 'Sin descripción'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.text }]}>Platillos</Text>
-      <Text style={[styles.subtitle, { color: colors.icon }]}>Aquí estarán todos los platillos disponibles</Text>
+      <Text style={[styles.subtitle, { color: colors.icon }]}>
+        Aquí estarán todos los platillos disponibles
+      </Text>
+
+      {/* ✅ NUEVO: Lista de platillos */}
+      <FlatList
+        data={dishes}
+        keyExtractor={(item) => item.id}
+        renderItem={renderDish}
+        style={styles.dishList}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 40, color: colors.icon }}>
+            No hay platillos aún. ¡Crea el primero!
+          </Text>
+        }
+      />
+
       <View style={styles.bottomButtonWrapper}>
-        <TouchableOpacity style={[styles.createButton, { backgroundColor: colors.tint }]} onPress={handleCrearPlatillo}>
-          <Text style={[styles.createButtonText, { color: colors.background }]}>Crear Platillo</Text>
+        <TouchableOpacity
+          style={[styles.createButton, { backgroundColor: colors.tint }]}
+          onPress={handleCrearPlatillo}
+        >
+          <Text style={[styles.createButtonText, { color: colors.background }]}>
+            Crear Platillo
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {/* MODAL */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -55,7 +144,7 @@ export default function DishesScreen() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.background }]}> 
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <ThemedText type="title">Crear Platillo</ThemedText>
             <Input
               placeholder="Nombre del platillo"
@@ -69,21 +158,59 @@ export default function DishesScreen() {
               onChangeText={setDescription}
               style={{ marginBottom: 12 }}
             />
-            {error ? <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text> : null}
+
+            {/* 📸 NUEVO: Imagen del platillo */}
+            <View style={{ marginBottom: 12 }}>
+              <Text style={{ fontWeight: 'bold', marginBottom: 6, color: colors.text }}>
+                Imagen del platillo (opcional)
+              </Text>
+              {imageUri ? (
+                <>
+                  <RNImage source={{ uri: imageUri }} style={styles.preview} />
+                  <View style={styles.row}>
+                    <TouchableOpacity
+                      style={[styles.imageButton, { borderColor: colors.tint }]}
+                      onPress={handlePickImage}
+                    >
+                      <Text style={{ color: colors.tint }}>Cambiar imagen</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.imageButton} onPress={handleRemoveImage}>
+                      <Text style={{ color: 'red' }}>Quitar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.imageButton, { borderColor: colors.tint }]}
+                  onPress={handlePickImage}
+                >
+                  <Text style={{ color: colors.tint }}>Seleccionar imagen</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {error ? (
+              <Text style={{ color: 'red', marginBottom: 8 }}>{error}</Text>
+            ) : null}
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Pressable
                 style={[styles.modalButton, { backgroundColor: colors.tint }]}
                 onPress={handleSubmit}
                 disabled={loading}
               >
-                <Text style={[styles.createButtonText, { color: colors.background }]}>{loading ? 'Creando...' : 'Crear'}</Text>
+                <Text style={[styles.createButtonText, { color: colors.background }]}>
+                  {loading ? 'Creando...' : 'Crear'}
+                </Text>
               </Pressable>
               <Pressable
                 style={[styles.modalButton, { backgroundColor: colors.icon }]}
                 onPress={() => setModalVisible(false)}
                 disabled={loading}
               >
-                <Text style={[styles.createButtonText, { color: colors.background }]}>Cancelar</Text>
+                <Text style={[styles.createButtonText, { color: colors.background }]}>
+                  Cancelar
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -97,17 +224,47 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  dishList: {
+    flex: 1,
+    width: '100%',
+  },
+  dishCard: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  dishImage: {
+    width: '100%',
+    height: 180,
+  },
+  dishInfo: {
+    padding: 12,
+  },
+  dishName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  dishDescription: {
+    fontSize: 14,
   },
   createButton: {
     paddingVertical: 12,
@@ -116,7 +273,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     width: '90%',
-    marginBottom: 0,
   },
   bottomButtonWrapper: {
     position: 'absolute',
@@ -153,5 +309,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 4,
     marginTop: 8,
+  },
+  preview: {
+    width: '100%',
+    height: 180,
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  imageButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    alignItems: 'center',
   },
 });

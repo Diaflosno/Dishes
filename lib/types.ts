@@ -21,9 +21,19 @@ export type Recipe = {
   title: string;
   dishId: string;
   userId: string;
-  ingredients: string[];
-  instructions: string[];
-  imageId: string;
-  cookingTime: number; // in minutes
-  likes: number;
+
+  // ✅ Ingredientes: pueden venir como array o string, así evitamos el error de .split()
+  ingredients: string[] | string;
+
+  // ✅ Cambiar 'instructions' por 'steps' para que coincida con lo que usas en el código
+  steps?: string;
+
+  // ✅ imageUrl en lugar de imageId, porque usamos URL completa en la app
+  imageUrl?: string;
+
+  // ⏱️ Mantiene el tiempo de cocción, pero opcional por si no se envía
+  cookingTime?: number;
+
+  // ❤️ Número de likes (opcional también)
+  likes?: number;
 };

@@ -1,194 +1,192 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
-// Se eliminó 'View' de las importaciones
-import { Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useForm, Controller } from 'react-hook-form';
-
-import { useData } from '@/context/DataContext';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import { Input } from '@/components/ui/input';
-
-type FormData = {
-  title: string;
-  cookingTime: string;
-  ingredients: string;
-  instructions: string;
-};
+import React, { useState } from "react";
+import {
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+  Image,
+} from "react-native";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useData } from "@/context/DataContext";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { pickImageFromGallery, uploadImageAsync } from "@/firebase/uploadImage";
 
 export default function CreateRecipeScreen() {
   const { dishId } = useLocalSearchParams<{ dishId: string }>();
-  const colorScheme = useColorScheme() ?? 'light';
+  const { addRecipe } = useData();
+  const colorScheme = useColorScheme() ?? "light";
   const colors = Colors[colorScheme];
   const router = useRouter();
-  const { addRecipe } = useData();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
+  // 🧠 Estados del formulario
+  const [title, setTitle] = useState("");
+  const [ingredients, setIngredients] = useState("");
+  const [steps, setSteps] = useState("");
+  const [cookingTime, setCookingTime] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
-  const onSubmit = async (data: FormData) => {
-    if (!dishId) {
-      Alert.alert('Error', 'No se ha proporcionado un platillo para añadir la receta.');
+  // 📸 Elegir imagen
+  const handlePickImage = async () => {
+    const uri = await pickImageFromGallery();
+    if (uri) setImageUri(uri);
+  };
+
+  const handleCreateRecipe = async () => {
+    if (!title || !ingredients || !steps) {
+      Alert.alert("Campos incompletos", "Por favor completa todos los campos.");
       return;
     }
-    
-    setIsSubmitting(true);
+
     try {
+      setUploading(true);
+      let imageUrl = "";
+
+      // ☁️ Subir imagen si se eligió
+      if (imageUri) {
+        const fileName = `recipes/${Date.now()}.jpg`;
+        imageUrl = await uploadImageAsync(imageUri, fileName);
+      }
+
       const recipeData = {
-        title: data.title,
-        cookingTime: parseInt(data.cookingTime, 10),
-        ingredients: data.ingredients.split('\n').filter(line => line.trim() !== ''),
-        instructions: data.instructions.split('\n').filter(line => line.trim() !== ''),
-        imageId: '',
-        dishId: dishId,
+        title,
+        dishId: dishId ?? "",
+        ingredients,
+        steps,
+        cookingTime: cookingTime ? Number(cookingTime) : undefined,
+        imageUrl,
       };
 
-      await addRecipe(recipeData); // Ahora solo pasamos un argumento
+      console.log("🍲 Guardando receta:", recipeData);
+      await addRecipe(recipeData);
 
-      Alert.alert('¡Éxito!', 'Tu receta ha sido añadida.');
+      Alert.alert("✅ Éxito", "Receta publicada con éxito");
       router.back();
     } catch (error) {
-      console.error("Error al añadir la receta:", error);
-      Alert.alert('Error', 'No se pudo añadir la receta. Por favor, inténtalo de nuevo.');
+      console.error("❌ Error al publicar receta:", error);
+      Alert.alert("Error", "No se pudo publicar la receta.");
     } finally {
-      setIsSubmitting(false);
+      setUploading(false);
     }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen options={{ title: 'Añadir Nueva Receta' }} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>Nueva Receta</Text>
-        
-        <Controller
-          control={control}
-          rules={{ required: 'El título es obligatorio.' }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              placeholder="Título de la receta"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              style={errors.title && styles.inputError}
-            />
-          )}
-          name="title"
-        />
-        {errors.title && <Text style={styles.errorText}>{errors.title.message}</Text>}
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Screen options={{ title: "Crear Receta" }} />
 
-        <Controller
-          control={control}
-          rules={{ 
-            required: 'El tiempo es obligatorio.',
-            pattern: { value: /^[0-9]+$/, message: 'Solo se admiten números.' }
-          }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <Input
-              placeholder="Tiempo de preparación (en minutos)"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              keyboardType="numeric"
-              style={errors.cookingTime && styles.inputError}
-            />
-          )}
-          name="cookingTime"
-        />
-        {errors.cookingTime && <Text style={styles.errorText}>{errors.cookingTime.message}</Text>}
+      {/* 📸 Imagen */}
+      <Text style={[styles.label, { color: colors.text }]}>📸 Imagen de la receta</Text>
+      <TouchableOpacity style={styles.imagePicker} onPress={handlePickImage}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.preview} />
+        ) : (
+          <Text style={{ color: colors.tint }}>Seleccionar imagen 📁</Text>
+        )}
+      </TouchableOpacity>
 
-        <Controller
-          control={control}
-          rules={{ required: 'Los ingredientes son obligatorios.' }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              placeholder="Ingredientes (uno por línea)"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              multiline
-              style={[styles.textArea, { backgroundColor: colors.background, borderColor: colors.icon, color: colors.text }, errors.ingredients && styles.inputError]}
-              placeholderTextColor={colors.icon}
-            />
-          )}
-          name="ingredients"
-        />
-        {errors.ingredients && <Text style={styles.errorText}>{errors.ingredients.message}</Text>}
+      {/* 🏷️ Título */}
+      <Text style={[styles.label, { color: colors.text }]}>📛 Título</Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
+        value={title}
+        onChangeText={setTitle}
+        placeholder="Ej: Pollo a la plancha"
+      />
 
-        <Controller
-          control={control}
-          rules={{ required: 'Las instrucciones son obligatorias.' }}
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              placeholder="Instrucciones (un paso por línea)"
-              onBlur={onBlur}
-              onChangeText={onChange}
-              value={value}
-              multiline
-              style={[styles.textArea, { backgroundColor: colors.background, borderColor: colors.icon, color: colors.text }, errors.instructions && styles.inputError]}
-              placeholderTextColor={colors.icon}
-            />
-          )}
-          name="instructions"
-        />
-        {errors.instructions && <Text style={styles.errorText}>{errors.instructions.message}</Text>}
+      {/* 🥬 Ingredientes */}
+      <Text style={[styles.label, { color: colors.text }]}>
+        🥦 Ingredientes (separados por coma)
+      </Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
+        value={ingredients}
+        onChangeText={setIngredients}
+        placeholder="Ej: Pollo, aceite, sal"
+      />
 
-        <TouchableOpacity 
-          style={[styles.submitButton, { backgroundColor: colors.tint }]} 
-          onPress={handleSubmit(onSubmit)}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.background} />
-          ) : (
-            <Text style={[styles.submitButtonText, { color: colors.background }]}>Publicar Receta</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      {/* 📖 Instrucciones */}
+      <Text style={[styles.label, { color: colors.text }]}>
+        📜 Instrucciones (separadas por punto)
+      </Text>
+      <TextInput
+        style={[
+          styles.input,
+          { color: colors.text, borderColor: colors.tint, height: 100 },
+        ]}
+        value={steps}
+        onChangeText={setSteps}
+        placeholder="Ej: Calienta el aceite. Cocina el pollo."
+        multiline
+      />
+
+      {/* ⏱️ Tiempo de preparación */}
+      <Text style={[styles.label, { color: colors.text }]}>
+        ⏱️ Tiempo de preparación (minutos)
+      </Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
+        value={cookingTime}
+        onChangeText={setCookingTime}
+        placeholder="Ej: 30"
+        keyboardType="numeric"
+      />
+
+      {/* 📤 Botón */}
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.tint }]}
+        onPress={handleCreateRecipe}
+        disabled={uploading}
+      >
+        <Text style={styles.buttonText}>
+          {uploading ? "Subiendo imagen..." : "✅ Publicar Receta"}
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 20,
   },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  textArea: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  label: {
     fontSize: 16,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  submitButton: {
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: 'center',
+    fontWeight: "600",
     marginTop: 16,
   },
-  submitButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 12,
   },
-  inputError: {
-    borderColor: 'red',
+  imagePicker: {
+    height: 180,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 10,
   },
-  errorText: {
-    color: 'red',
-    marginTop: -12,
-    marginBottom: 8,
-    marginLeft: 4,
+  preview: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 10,
+  },
+  button: {
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
   },
 });

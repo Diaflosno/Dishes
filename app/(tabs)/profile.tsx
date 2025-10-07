@@ -1,160 +1,85 @@
-import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-// Se eliminó la importación de 'Image' que no se usaba
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { useData } from '@/context/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import { useData } from '@/context/DataContext';
+import RecipeCard from '@/components/ui/recipe-card';
 
 export default function ProfileScreen() {
+  const { currentUser, dishes, recipes } = useData();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { currentUser, signOut, recipes, dishes } = useData();
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Optimizamos los cálculos con useMemo
-  const userRecipes = useMemo(() => recipes.filter(recipe => recipe.userId === currentUser?.id), [recipes, currentUser?.id]);
-  const userDishes = useMemo(() => dishes.filter(dish => dish.userId === currentUser?.id), [dishes, currentUser?.id]);
-  const totalLikes = useMemo(() => userRecipes.reduce((sum, recipe) => sum + recipe.likes, 0), [userRecipes]);
-
-  const handleSignOut = async () => {
-    Alert.alert(
-      'Cerrar Sesión',
-      '¿Estás seguro de que quieres cerrar sesión?',
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel',
-        },
-        {
-          text: 'Cerrar Sesión',
-          style: 'destructive',
-          onPress: async () => {
-            setIsLoading(true);
-            try {
-              await signOut();
-            } catch (error) {
-              console.error('Error al cerrar sesión:', error);
-              Alert.alert(
-                'Error',
-                'No se pudo cerrar sesión. Por favor, inténtalo de nuevo.',
-                [{ text: 'OK' }]
-              );
-            } finally {
-              setIsLoading(false);
-            }
-          },
-        },
-      ]
-    );
-  };
 
   if (!currentUser) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.centerContent}>
-          <Text style={[styles.emptyText, { color: colors.icon }]}>
-            No hay usuario autenticado
-          </Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.center}>
+        <Text style={{ color: colors.text }}>Cargando perfil...</Text>
+      </View>
     );
   }
 
+  // 🍲 Platillos y recetas creadas por el usuario
+  const userDishes = dishes.filter(d => d.userId === currentUser.id);
+  const userRecipes = recipes.filter(r => r.userId === currentUser.id);
+
+  // ❤️ Recetas que el usuario ha dado "me gusta"
+const likedRecipes = useMemo(() => {
+  return recipes.filter(r => (currentUser?.likedRecipeIds || []).includes(r.id));
+}, [recipes, currentUser?.likedRecipeIds]);
+
+// 📊 Estadísticas
+const totalLikesReceived = useMemo(() => {
+  return userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0);
+}, [userRecipes]);
+
+  const totalLikesGiven = currentUser.likedRecipeIds?.length || 0;
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* 👤 Información básica del usuario */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Mi Perfil
+        <Text style={[styles.name, { color: colors.text }]}>{currentUser.name}</Text>
+        <Text style={[styles.email, { color: colors.icon }]}>{currentUser.email}</Text>
+      </View>
+
+      {/* 📊 Estadísticas */}
+      <View style={styles.statsRow}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.tint }]}>{userDishes.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.icon }]}>Platillos</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.tint }]}>{userRecipes.length}</Text>
+          <Text style={[styles.statLabel, { color: colors.icon }]}>Recetas</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.tint }]}>{totalLikesGiven}</Text>
+          <Text style={[styles.statLabel, { color: colors.icon }]}>Me gusta dados</Text>
+        </View>
+
+        <View style={styles.statItem}>
+          <Text style={[styles.statNumber, { color: colors.tint }]}>{totalLikesReceived}</Text>
+          <Text style={[styles.statLabel, { color: colors.icon }]}>Me gusta recibidos</Text>
+        </View>
+      </View>
+
+      {/* ❤️ Recetas que ha dado like */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Recetas que te han gustado
         </Text>
+
+        {likedRecipes.length === 0 ? (
+          <Text style={[styles.emptyText, { color: colors.icon }]}>
+            Aún no has dado &quot;me gusta&quot; a ninguna receta 🍽️
+          </Text>
+        ) : (
+          likedRecipes.map(recipe => <RecipeCard key={recipe.id} recipe={recipe} />)
+        )}
       </View>
-
-      <View style={styles.content}>
-        {/* Avatar y información básica */}
-        <View style={styles.profileSection}>
-          <View style={[styles.avatarContainer, { borderColor: colors.tint }]}>
-            {currentUser.name ? (
-              <Text style={[styles.avatarText, { color: colors.tint }]}>
-                {currentUser.name.charAt(0).toUpperCase()}
-              </Text>
-            ) : (
-              <Text style={[styles.avatarText, { color: colors.tint }]}>U</Text>
-            )}
-          </View>
-          
-          <Text style={[styles.userName, { color: colors.text }]}>
-            {currentUser.name || 'Usuario'}
-          </Text>
-          
-          <Text style={[styles.userEmail, { color: colors.icon }]}>
-            {currentUser.email}
-          </Text>
-          
-          <Text style={[styles.userBio, { color: colors.icon }]}>
-            {currentUser.bio}
-          </Text>
-        </View>
-
-        {/* Estadísticas */}
-        <View style={[styles.statsSection, { backgroundColor: colors.background, borderColor: colors.icon + '20' }]}>
-          <Text style={[styles.statsTitle, { color: colors.text }]}>
-            Mis Estadísticas
-          </Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.tint }]}>
-                {userDishes.length}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.icon }]}>
-                Platillos
-              </Text>
-            </View>
-            
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.tint }]}>
-                {userRecipes.length}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.icon }]}>
-                Recetas
-              </Text>
-            </View>
-            
-            <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.tint }]}>
-                {totalLikes}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.icon }]}>
-                Me gusta
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Botón de cerrar sesión */}
-        <TouchableOpacity 
-          style={[styles.signOutButton, { backgroundColor: colors.background, borderColor: '#ff4444' }]}
-          onPress={handleSignOut}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="#ff4444" />
-          ) : (
-            <Text style={[styles.signOutText, { color: '#ff4444' }]}>
-              Cerrar Sesión
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+    </ScrollView>
   );
 }
 
@@ -162,98 +87,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
-    padding: 20,
-    paddingTop: 10,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    padding: 20,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 24,
     alignItems: 'center',
   },
-  profileSection: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  avatarContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  avatarText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-  },
-  userName: {
+  name: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
+    marginBottom: 4,
   },
-  userEmail: {
+  email: {
     fontSize: 16,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  userBio: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  statsSection: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 32,
-  },
-  statsTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
   },
   statItem: {
     alignItems: 'center',
   },
   statNumber: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 4,
   },
   statLabel: {
     fontSize: 14,
   },
-  signOutButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    borderWidth: 2,
-    alignItems: 'center',
-    marginTop: 'auto',
+  section: {
+    padding: 16,
   },
-  signOutText: {
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 16,
   },
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
+    marginTop: 12,
   },
 });
