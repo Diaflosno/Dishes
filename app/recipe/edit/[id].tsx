@@ -1,12 +1,19 @@
-import React, {useState } from "react";
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, ScrollView } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
+} from "react-native";
+import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useData } from "@/context/DataContext";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { pickImageFromGallery, uploadImageAsync } from "@/firebase/uploadImage";
 import type { Recipe } from "@/lib/types";
-
 
 export default function EditRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,35 +59,35 @@ export default function EditRecipeScreen() {
 
   // 💾 Guardar cambios
   const handleSave = async () => {
-  if (!title || !ingredients || !steps) {
-    Alert.alert("Campos incompletos", "Por favor completa todos los campos.");
-    return;
-  }
+    if (!title || !ingredients || !steps) {
+      Alert.alert("Campos incompletos", "Por favor completa todos los campos.");
+      return;
+    }
 
-  setSaving(true);
-  try {
-    const updatedRecipe: Recipe = {
-      id: recipe?.id ?? "",
-      dishId: recipe?.dishId ?? "",
-      userId: recipe?.userId ?? "",
-      title,
-      ingredients: ingredients.split(",").map((i) => i.trim()),
-      steps: steps,
-      cookingTime: cookingTime ? Number(cookingTime) : undefined,
-      imageUrl: imageUrl ?? "",
-      likes: recipe?.likes ?? 0,
-    };
+    setSaving(true);
+    try {
+      const updatedRecipe: Recipe = {
+        id: recipe?.id ?? "",
+        dishId: recipe?.dishId ?? "",
+        userId: recipe?.userId ?? "",
+        title,
+        ingredients: ingredients.split(",").map((i) => i.trim()),
+        steps,
+        cookingTime: cookingTime ? Number(cookingTime) : undefined,
+        imageUrl: imageUrl ?? "",
+        likes: recipe?.likes ?? 0,
+      };
 
-    await updateRecipe(updatedRecipe);
-    Alert.alert("✅ Éxito", "La receta se actualizó correctamente.");
-    router.push(`/recipe/${id}`);
-  } catch (error) {
-    console.error("❌ Error al actualizar la receta:", error);
-    Alert.alert("Error", "No se pudo actualizar la receta.");
-  } finally {
-    setSaving(false);
-  }
-};
+      await updateRecipe(updatedRecipe);
+      Alert.alert("✅ Éxito", "La receta se actualizó correctamente.");
+      router.push(`/recipe/${id}`);
+    } catch (error) {
+      console.error("❌ Error al actualizar la receta:", error);
+      Alert.alert("Error", "No se pudo actualizar la receta.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!recipe) {
     return (
@@ -92,21 +99,41 @@ export default function EditRecipeScreen() {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* ✅ Cambiar el título de la pantalla */}
+      <Stack.Screen options={{ title: `✏️ Editar: ${title || "Receta"}` }} />
+
       <Text style={[styles.label, { color: colors.text }]}>📛 Título</Text>
-      <TextInput style={[styles.input, { color: colors.text, borderColor: colors.tint }]} value={title} onChangeText={setTitle} />
-
-      <Text style={[styles.label, { color: colors.text }]}>🥦 Ingredientes (separados por coma)</Text>
-      <TextInput style={[styles.input, { color: colors.text, borderColor: colors.tint }]} value={ingredients} onChangeText={setIngredients} />
-
-      <Text style={[styles.label, { color: colors.text }]}>📜 Instrucciones (separadas por punto)</Text>
       <TextInput
-        style={[styles.input, { color: colors.text, borderColor: colors.tint, height: 100 }]}
+        style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
+        value={title}
+        onChangeText={setTitle}
+      />
+
+      <Text style={[styles.label, { color: colors.text }]}>
+        🥦 Ingredientes (separados por coma)
+      </Text>
+      <TextInput
+        style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
+        value={ingredients}
+        onChangeText={setIngredients}
+      />
+
+      <Text style={[styles.label, { color: colors.text }]}>
+        📜 Instrucciones (separadas por punto)
+      </Text>
+      <TextInput
+        style={[
+          styles.input,
+          { color: colors.text, borderColor: colors.tint, height: 100 },
+        ]}
         value={steps}
         onChangeText={setSteps}
         multiline
       />
 
-      <Text style={[styles.label, { color: colors.text }]}>⏱️ Tiempo de preparación (minutos)</Text>
+      <Text style={[styles.label, { color: colors.text }]}>
+        ⏱️ Tiempo de preparación (minutos)
+      </Text>
       <TextInput
         style={[styles.input, { color: colors.text, borderColor: colors.tint }]}
         value={cookingTime}
@@ -114,12 +141,21 @@ export default function EditRecipeScreen() {
         keyboardType="numeric"
       />
 
-      <TouchableOpacity style={[styles.imageButton, { backgroundColor: colors.tint }]} onPress={handleImageChange}>
+      <TouchableOpacity
+        style={[styles.imageButton, { backgroundColor: colors.tint }]}
+        onPress={handleImageChange}
+      >
         <Text style={styles.buttonText}>📷 Cambiar imagen</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: colors.tint }]} onPress={handleSave} disabled={saving}>
-        <Text style={styles.buttonText}>{saving ? "Guardando..." : "💾 Guardar cambios"}</Text>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: colors.tint }]}
+        onPress={handleSave}
+        disabled={saving}
+      >
+        <Text style={styles.buttonText}>
+          {saving ? "Guardando..." : "💾 Guardar cambios"}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
