@@ -21,7 +21,7 @@ import {
 export default function DishesScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addDish, dishes } = useData();
+  const { addDish, dishes, currentUser } = useData();
   const router = useRouter();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -111,9 +111,9 @@ export default function DishesScreen() {
         Aquí estarán todos los platillos disponibles
       </Text>
 
-      {/* ✅ NUEVO: Lista de platillos */}
+      {/* ✅ NUEVO: Lista de platillos solo del usuario */}
       <FlatList
-        data={dishes}
+        data={currentUser ? dishes.filter(d => d.userId === currentUser.id) : []}
         keyExtractor={(item) => item.id}
         renderItem={renderDish}
         style={styles.dishList}
