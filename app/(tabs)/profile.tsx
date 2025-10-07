@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import RecipeCard from '@/components/ui/recipe-card';
+import { Colors } from '@/constants/theme';
 import { useData } from '@/context/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Colors } from '@/constants/theme';
-import RecipeCard from '@/components/ui/recipe-card';
+import React, { useMemo } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
-  const { currentUser, dishes, recipes } = useData();
+  const { currentUser, dishes, recipes, signOut } = useData();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
@@ -23,14 +23,14 @@ export default function ProfileScreen() {
   const userRecipes = recipes.filter(r => r.userId === currentUser.id);
 
   // ❤️ Recetas que el usuario ha dado "me gusta"
-const likedRecipes = useMemo(() => {
-  return recipes.filter(r => (currentUser?.likedRecipeIds || []).includes(r.id));
-}, [recipes, currentUser?.likedRecipeIds]);
+  const likedRecipes = useMemo(() => {
+    return recipes.filter(r => (currentUser?.likedRecipeIds || []).includes(r.id));
+  }, [recipes, currentUser?.likedRecipeIds]);
 
-// 📊 Estadísticas
-const totalLikesReceived = useMemo(() => {
-  return userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0);
-}, [userRecipes]);
+  // 📊 Estadísticas
+  const totalLikesReceived = useMemo(() => {
+    return userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0);
+  }, [userRecipes]);
 
   const totalLikesGiven = currentUser.likedRecipeIds?.length || 0;
 
@@ -40,6 +40,19 @@ const totalLikesReceived = useMemo(() => {
       <View style={styles.header}>
         <Text style={[styles.name, { color: colors.text }]}>{currentUser.name}</Text>
         <Text style={[styles.email, { color: colors.icon }]}>{currentUser.email}</Text>
+        <TouchableOpacity
+          style={{
+            marginTop: 16,
+            backgroundColor: colors.tint,
+            paddingVertical: 10,
+            paddingHorizontal: 24,
+            borderRadius: 8,
+            alignItems: 'center',
+          }}
+          onPress={signOut}
+        >
+          <Text style={{ color: colors.background, fontWeight: 'bold' }}>Cerrar sesión</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 📊 Estadísticas */}

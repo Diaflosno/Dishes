@@ -21,7 +21,9 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoginMode, setIsLoginMode] = useState(true); // true = login, false = registro
 
   const heroImage = placeholderImages.find(img => img.id === 'hero-main');
 
@@ -41,8 +43,10 @@ export default function LoginScreen() {
   const handleRegister = async () => {
     setIsRegistering(true);
     try {
-      await authService.registerWithEmail(email, password);
+      // Suponiendo que tu authService.registerWithEmail puede aceptar username
+      await authService.registerWithEmail(email, password, username);
       Alert.alert('Registro exitoso', 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.');
+      setIsLoginMode(true); // Cambia a modo login después de registrar
     } catch (error: any) {
       Alert.alert('Error de registro', error.message || 'No se pudo registrar el usuario.');
     } finally {
@@ -71,10 +75,27 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* Login Section */}
+      {/* Login/Registro Section */}
       <View style={styles.loginSection}>
         <Text style={[styles.welcomeTitle, { color: colors.text }]}>¡Bienvenido!</Text>
-        <Text style={[styles.welcomeSubtitle, { color: colors.icon }]}>Inicia sesión para explorar miles de recetas deliciosas</Text>
+        <Text style={[styles.welcomeSubtitle, { color: colors.icon }]}>Inicia sesión o regístrate para explorar miles de recetas deliciosas</Text>
+
+        {/* Username Input (solo en registro) */}
+        {!isLoginMode && (
+          <View style={styles.inputGroup}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>Nombre de usuario</Text>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                style={[styles.input, { color: colors.text, borderColor: colors.icon + '40' }]}
+                placeholder="Nombre de usuario"
+                placeholderTextColor={colors.icon}
+                autoCapitalize="none"
+                value={username}
+                onChangeText={setUsername}
+              />
+            </View>
+          </View>
+        )}
 
         {/* Email Input */}
         <View style={styles.inputGroup}>
@@ -105,30 +126,33 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {/* Login Button */}
+        {/* Botón principal: Login o Registro */}
         <TouchableOpacity
           style={[styles.loginButton, { backgroundColor: colors.tint }]}
-          onPress={handleLogin}
-          disabled={isLoading || !email || !password}
+          onPress={isLoginMode ? handleLogin : handleRegister}
+          disabled={
+            isLoginMode
+              ? isLoading || !email || !password
+              : isRegistering || !email || !password || !username
+          }
         >
-          {isLoading ? (
+          {(isLoginMode && isLoading) || (!isLoginMode && isRegistering) ? (
             <ActivityIndicator size="small" color={colors.background} />
           ) : (
-            <Text style={[styles.loginButtonText, { color: colors.background }]}>Iniciar sesión</Text>
+            <Text style={[styles.loginButtonText, { color: colors.background }]}> 
+              {isLoginMode ? 'Iniciar sesión' : 'Registrar e iniciar sesión'}
+            </Text>
           )}
         </TouchableOpacity>
 
-        {/* Register Button */}
+        {/* Botón para alternar entre login y registro */}
         <TouchableOpacity
           style={[styles.registerButton, { borderColor: colors.tint }]}
-          onPress={handleRegister}
-          disabled={isRegistering || !email || !password}
+          onPress={() => setIsLoginMode(!isLoginMode)}
         >
-          {isRegistering ? (
-            <ActivityIndicator size="small" color={colors.tint} />
-          ) : (
-            <Text style={[styles.registerButtonText, { color: colors.tint }]}>Registrarse</Text>
-          )}
+          <Text style={[styles.registerButtonText, { color: colors.tint }]}> 
+            {isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+          </Text>
         </TouchableOpacity>
 
         <Text style={[styles.disclaimer, { color: colors.icon }]}>Al continuar, aceptas nuestros términos de servicio y política de privacidad</Text>

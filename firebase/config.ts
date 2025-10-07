@@ -1,10 +1,5 @@
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  initializeAuth, 
-  getReactNativePersistence, 
-  GoogleAuthProvider 
-} from 'firebase/auth';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
@@ -21,10 +16,8 @@ const firebaseConfig = {
 // ✅ Inicializar app
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// ✅ Auth con persistencia
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-});
+// ✅ Auth sin persistencia personalizada (Expo compatible)
+const auth = getAuth(app);
 
 // ✅ Firestore y Storage
 export const firestore = getFirestore(app);

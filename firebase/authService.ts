@@ -4,6 +4,7 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  updateProfile,
   User
 } from 'firebase/auth';
 import { auth } from './config';
@@ -19,9 +20,12 @@ class AuthService {
     }
   }
 
-  async registerWithEmail(email: string, password: string): Promise<User | null> {
+  async registerWithEmail(email: string, password: string, username?: string): Promise<User | null> {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      if (username && result.user) {
+        await updateProfile(result.user, { displayName: username });
+      }
       return result.user;
     } catch (error) {
       console.error('Error al registrar usuario:', error);
