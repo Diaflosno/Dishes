@@ -4,9 +4,11 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  updateProfile,
   User
 } from 'firebase/auth';
-import { auth } from './config';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, firestore } from './config';
 
 class AuthService {
   async signInWithEmail(email: string, password: string): Promise<User | null> {
@@ -19,9 +21,22 @@ class AuthService {
     }
   }
 
-  async registerWithEmail(email: string, password: string): Promise<User | null> {
+  async registerWithEmail(email: string, password: string, username?: string): Promise<User | null> {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
+      if (username && result.user) {
+        await updateProfile(result.user, { displayName: username });
+        // Actualizar también en Firestore
+        const userDocRef = doc(firestore, 'users', result.user.uid);
+        await setDoc(userDocRef, {
+          name: username,
+          email: result.user.email || '',
+          avatarImageId: '',
+          bio: '',
+          favoriteCuisines: [],
+          likedRecipeIds: [],
+        }, { merge: true });
+      }
       return result.user;
     } catch (error) {
       console.error('Error al registrar usuario:', error);

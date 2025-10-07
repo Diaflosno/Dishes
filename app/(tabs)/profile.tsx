@@ -3,12 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'rea
 import { useData } from '@/context/DataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
-import  RecipeCard  from '@/components/ui/recipe-card';
-import { getAuth, signOut } from 'firebase/auth';
+import RecipeCard from '@/components/ui/recipe-card';
+import { getAuth, signOut as firebaseSignOut } from 'firebase/auth';
 import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { currentUser, dishes, recipes } = useData();
+  const { currentUser, dishes, recipes, signOut } = useData();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
   const router = useRouter();
@@ -27,21 +27,21 @@ export default function ProfileScreen() {
 
   // ❤️ Recetas que el usuario ha dado "me gusta"
   const likedRecipes = useMemo(() => {
-    return recipes.filter(r => (currentUser.likedRecipeIds || []).includes(r.id));
-  }, [recipes, currentUser.likedRecipeIds]);
+    return recipes.filter(r => (currentUser?.likedRecipeIds || []).includes(r.id));
+  }, [recipes, currentUser?.likedRecipeIds]);
 
   // 📊 Estadísticas
-  const totalLikesReceived = useMemo(
-    () => userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0),
-    [userRecipes]
-  );
+  const totalLikesReceived = useMemo(() => {
+    return userRecipes.reduce((sum, r) => sum + (r.likes || 0), 0);
+  }, [userRecipes]);
+
   const totalLikesGiven = currentUser.likedRecipeIds?.length || 0;
 
   // 🔐 Cerrar sesión
   const handleSignOut = async () => {
     try {
       const auth = getAuth();
-      await signOut(auth);
+      await firebaseSignOut(auth);
       Alert.alert("Sesión cerrada", "Has cerrado sesión correctamente.");
       router.replace("/login");
     } catch (error) {
@@ -56,6 +56,20 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={[styles.name, { color: colors.text }]}>{currentUser.name}</Text>
         <Text style={[styles.email, { color: colors.icon }]}>{currentUser.email}</Text>
+        <TouchableOpacity
+          style={{
+            marginTop: 16,
+            backgroundColor: colors.tint,
+            paddingVertical: 7,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            alignItems: 'center',
+            minWidth: 120,
+          }}
+          onPress={signOut}
+        >
+          <Text style={{ color: 'red', fontWeight: 'bold', fontSize: 16 }}>Cerrar sesión</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 📊 Estadísticas */}
@@ -115,6 +129,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
+    paddingTop: 72, // margen superior aún mayor
     alignItems: 'center',
   },
   name: {

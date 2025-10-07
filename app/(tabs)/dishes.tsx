@@ -2,26 +2,26 @@ import { ThemedText } from '@/components/themed-text';
 import { Input } from '@/components/ui/input';
 import { Colors } from '@/constants/theme';
 import { useData } from '@/context/DataContext';
+import { pickImageFromGallery, uploadImageAsync } from '@/firebase/uploadImage';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  FlatList,
   Modal,
   Pressable,
+  Image as RNImage,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  FlatList,
-  Image as RNImage,
 } from 'react-native';
-import { pickImageFromGallery, uploadImageAsync } from '@/firebase/uploadImage';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
 
 export default function DishesScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
-  const { addDish, dishes } = useData();
+  const { addDish, dishes, currentUser } = useData();
   const router = useRouter();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -90,7 +90,7 @@ export default function DishesScreen() {
           contentFit="cover"
         />
         <View style={styles.dishInfo}>
-          <Text style={[styles.dishName, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.dishName, { color: '#fff', fontSize: 22, fontWeight: 'bold', textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 2 }]} numberOfLines={1}>
             {item.name}
           </Text>
           <Text
@@ -111,9 +111,9 @@ export default function DishesScreen() {
         Aquí estarán todos los platillos disponibles
       </Text>
 
-      {/* ✅ NUEVO: Lista de platillos */}
+      {/* ✅ NUEVO: Lista de platillos solo del usuario */}
       <FlatList
-        data={dishes}
+        data={currentUser ? dishes.filter(d => d.userId === currentUser.id) : []}
         keyExtractor={(item) => item.id}
         renderItem={renderDish}
         style={styles.dishList}
@@ -127,12 +127,13 @@ export default function DishesScreen() {
 
       <View style={styles.bottomButtonWrapper}>
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.tint }]}
+          style={[styles.createButton, { backgroundColor: colors.tint, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }]}
           onPress={handleCrearPlatillo}
         >
-          <Text style={[styles.createButtonText, { color: colors.background }]}>
+          <Text style={[styles.createButtonText, { color: colors.background, marginRight: 8 }]}> 
             Crear Platillo
           </Text>
+          <Text style={{ color: colors.background, fontSize: 22, fontWeight: 'bold' }}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -224,6 +225,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+  paddingTop: 52, // margen superior un poco mayor
   },
   title: {
     fontSize: 24,
@@ -243,7 +245,7 @@ const styles = StyleSheet.create({
   dishCard: {
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+  backgroundColor: '#000',
     marginBottom: 16,
     elevation: 2,
     shadowColor: '#000',
@@ -272,7 +274,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     alignSelf: 'center',
-    width: '90%',
+  width: '70%',
+  elevation: 12,
+  shadowColor: '#000',
+  shadowOpacity: 0.38,
+  shadowOffset: { width: 0, height: 8 },
+  shadowRadius: 18,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   bottomButtonWrapper: {
     position: 'absolute',
