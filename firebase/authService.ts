@@ -7,7 +7,8 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { auth } from './config';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, firestore } from './config';
 
 class AuthService {
   async signInWithEmail(email: string, password: string): Promise<User | null> {
@@ -25,6 +26,16 @@ class AuthService {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       if (username && result.user) {
         await updateProfile(result.user, { displayName: username });
+        // Actualizar también en Firestore
+        const userDocRef = doc(firestore, 'users', result.user.uid);
+        await setDoc(userDocRef, {
+          name: username,
+          email: result.user.email || '',
+          avatarImageId: '',
+          bio: '',
+          favoriteCuisines: [],
+          likedRecipeIds: [],
+        }, { merge: true });
       }
       return result.user;
     } catch (error) {

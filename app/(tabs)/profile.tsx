@@ -44,14 +44,15 @@ export default function ProfileScreen() {
           style={{
             marginTop: 16,
             backgroundColor: colors.tint,
-            paddingVertical: 10,
-            paddingHorizontal: 24,
+            paddingVertical: 7,
+            paddingHorizontal: 16,
             borderRadius: 8,
             alignItems: 'center',
+            minWidth: 120,
           }}
           onPress={signOut}
         >
-          <Text style={{ color: colors.background, fontWeight: 'bold' }}>Cerrar sesión</Text>
+          <Text style={{ color: 'red', fontWeight: 'bold', fontSize: 16 }}>Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
 
@@ -107,6 +108,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
+  paddingTop: 72, // margen superior aún mayor
     alignItems: 'center',
   },
   name: {
